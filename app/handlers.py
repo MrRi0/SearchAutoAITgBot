@@ -7,7 +7,6 @@ import app.database.requests as rq
 import app.parser.parser as prs
 import os
 
-# импортируй файл метод вставляй ниже (found_car_by_photo)
 import AI.AISearch as ai
 
 router = Router()
@@ -16,6 +15,7 @@ searched_auto = ""
 ads = []
 index = 0
 car = ''
+page = 1
 
 class Car:
     def __init__(self, info_dict: dict):
@@ -40,7 +40,7 @@ async def cmd_start(message: Message):
 
 @router.message(F.photo)
 async def found_car_by_photo(message: Message):
-    global searched_auto, ads, index, car
+    global searched_auto, ads, index, car, page
     photo_id = message.photo[-1].file_id
     file = await message.bot.get_file(photo_id)
     photo_name = f"{photo_id}.jpg"
@@ -52,6 +52,7 @@ async def found_car_by_photo(message: Message):
     ads = []
     index = 0
     car = ''
+    page = 1
 
     await message.answer_photo(photo=FSInputFile(r'image\picture.png'),
                                caption='Нашел похожий автомобиль\n\n\n'
@@ -78,16 +79,18 @@ async def favourites(callback: CallbackQuery):
 
 @router.callback_query(F.data == 'ad')
 async def found_ad(callback: CallbackQuery):
-    global ads, index, car, searched_auto
+    global ads, index, car, searched_auto, page
     await callback.answer('Поиск объявлений')
-    if index % 20 == 0:
+    if len(ads) == 0:
         searched_auto = searched_auto.lower().split()
         del searched_auto[-2]
         searched_auto = ' '.join(searched_auto)
-        print(searched_auto)
         ads = prs.get_drom_ads_with_photos(searched_auto)
         index = 0
-    print(ads)
+    elif index >= len(ads):
+        page += 1
+        ads = prs.get_more_drom_ads_(page)
+        index = 0
     car = Car(ads[index])
     index += 1
     await callback.message.answer_photo(photo=car.photo,

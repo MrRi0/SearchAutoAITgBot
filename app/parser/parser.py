@@ -9,7 +9,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 
+current_url = ''
+
 def get_drom_ads_with_photos(auto_name):
+    global current_url
     url = "https://auto.drom.ru/"
 
     options = Options()
@@ -32,6 +35,22 @@ def get_drom_ads_with_photos(auto_name):
     WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, "[data-ftid='bulls-list_bull']"))
     )
+    current_url = driver.current_url
+    return parse_drom_ads(current_url, 1)
+
+
+def get_more_drom_ads_(page: int):
+    return parse_drom_ads(current_url, page)
+
+def parse_drom_ads(url, page):
+    options = Options()
+    options.add_argument("--headless")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("user-agent=Mozilla/5.0")
+    driver = webdriver.Chrome(options=options)
+    if page > 1:
+        url = url.replace('all/', f'all/page{page}')
+    driver.get(url)
 
     for _ in range(3):
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -79,7 +98,6 @@ def get_drom_ads_with_photos(auto_name):
                 "url": link,
                 "photo": img_url
             })
-            print(ads)
 
         except Exception as e:
             print(f"⚠️ Ошибка при обработке объявления: {e}")
