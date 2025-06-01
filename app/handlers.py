@@ -1,17 +1,20 @@
 from aiogram import Router, F
 from aiogram.filters import CommandStart
-from aiogram.types import Message, FSInputFile, CallbackQuery
+from aiogram.types import Message, FSInputFile, CallbackQuery, InputMediaPhoto
+from aiogram.utils.chat_action import ChatActionSender
 
 import app.keyboards as kb
 import app.database.requests as rq
-import app.parser.parser as prs
+import app.parser.drom_parser as drom_prs
+import app.parser.wiki_parser as wiki_prs
 import os
 
 import AI.AISearch as ai
 
 router = Router()
 
-searched_auto = ""
+searched_auto_ai = ""
+searched_auto_wiki = ""
 ads = []
 index = 0
 car = ''
@@ -40,7 +43,7 @@ async def cmd_start(message: Message):
 
 @router.message(F.photo)
 async def found_car_by_photo(message: Message):
-    global searched_auto, ads, index, car, page
+    global searched_auto_ai, ads, index, car, page
     photo_id = message.photo[-1].file_id
     file = await message.bot.get_file(photo_id)
     photo_name = f"{photo_id}.jpg"
@@ -48,16 +51,23 @@ async def found_car_by_photo(message: Message):
     download_path = os.path.join(download_direction, photo_name)
     await message.bot.download_file(file.file_path, download_path)
 
-    searched_auto = ai.found_car_by_photo(photo_name)
+    searched_auto_ai = ai.found_car_by_photo(photo_name)
     ads = []
     index = 0
     car = ''
     page = 1
-
-    await message.answer_photo(photo=FSInputFile(r'image\picture.png'),
-                               caption='Нашел похожий автомобиль\n\n\n'
-                                       f'Это {searched_auto}\n',
-                               reply_markup=kb.main_inline_keyboard)
+    info = wiki_prs.get_car_info(searched_auto_ai)
+    if (type(info) == str):
+        await message.answer(text=info)
+    else:
+        media = []
+        for img in info['car_images']:
+            media.append(InputMediaPhoto(type='photo', media=img))
+        await message.answer_media_group(media)
+        await message.answer(text='Нашел похожий автомобиль\n\n'
+                                  f'Это {searched_auto_ai}\n\n'
+                                  f'{info["car_info"]}',
+                             reply_markup=kb.get_main_inline_keyboard(info['url']))
 
 @router.message(F.text == 'Избранное📌')
 async def favourites(message: Message):
@@ -66,10 +76,20 @@ async def favourites(message: Message):
 
 @router.message(F.text)
 async def found_car_by_text(message: Message):
-    await message.answer_photo(photo=FSInputFile(r'image\picture.png'),
-                               caption='(BETA)Нашел похожий автомобиль\n\n\n'
-                                       f'Это {searched_auto}\n',
-                               reply_markup=kb.main_inline_keyboard)
+    global searched_auto_wiki
+    info = wiki_prs.get_car_info(message.text)
+    if (type(info) == str):
+        await message.answer(text=info)
+    else:
+        media = []
+        for img in info['car_images']:
+                media.append(InputMediaPhoto(type='photo', media=img))
+        searched_auto_wiki = info['car_name']
+        await message.answer_media_group(media)
+        await message.answer(text='Нашел похожий автомобиль\n\n'
+                                  f'Это {info["car_name"]}\n\n'
+                                  f'{info["car_info"]}',
+                             reply_markup=kb.get_main_inline_keyboard(info['url']))
 
 @router.callback_query(F.data == 'favourite')
 async def favourites(callback: CallbackQuery):
@@ -79,23 +99,26 @@ async def favourites(callback: CallbackQuery):
 
 @router.callback_query(F.data == 'ad')
 async def found_ad(callback: CallbackQuery):
-    global ads, index, car, searched_auto, page
+    global ads, index, car, searched_auto_ai, page
     await callback.answer('Поиск объявлений')
     if len(ads) == 0:
-        searched_auto = searched_auto.lower().split()
-        del searched_auto[-2]
-        searched_auto = ' '.join(searched_auto)
-        ads = prs.get_drom_ads_with_photos(searched_auto)
+        if searched_auto_ai != '':
+            name = searched_auto_ai.lower().split()
+            del name[-2]
+            name = ' '.join(name)
+        elif searched_auto_wiki != '':
+            name = searched_auto_wiki
+        ads = drom_prs.get_drom_ads_with_photos(name)
         index = 0
     elif index >= len(ads):
         page += 1
-        ads = prs.get_more_drom_ads_(page)
+        ads = drom_prs.get_more_drom_ads_(page)
         index = 0
     car = Car(ads[index])
     index += 1
     await callback.message.answer_photo(photo=car.photo,
                                         caption=f'{car.auto_name}\n\n'
-                                                f'Двигателя: {car.engine}\n'
+                                                f'Двигатель: {car.engine}\n'
                                                 f'Топливо: {car.fuel}\n'
                                                 f'Привод: {car.drive_type}\n'
                                                 f'КПП: {car.gearbox}\n'
