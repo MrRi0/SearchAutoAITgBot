@@ -1,7 +1,6 @@
 from aiogram import Router, F
 from aiogram.filters import CommandStart
 from aiogram.types import Message, FSInputFile, CallbackQuery, InputMediaPhoto
-from aiogram.utils.chat_action import ChatActionSender
 
 import app.keyboards as kb
 import app.database.requests as rq
@@ -41,6 +40,15 @@ async def cmd_start(message: Message):
                                         '\n\nПросто отправь фото или введи название автомобиля',
                                reply_markup=kb.main)
 
+@router.callback_query(F.data == 'main_menu')
+async def favourites(callback: CallbackQuery):
+    await callback.answer('')
+    await callback.message.answer_photo(photo=FSInputFile(r'image\picture.png'),
+                               caption='Привет! Я могу определить марку и модель автомобиля по фото,'
+                                       ' а также подобрать актуальные объявления по найденному автомобилю'
+                                       '\n\nПросто отправь фото или введи название автомобиля',
+                               reply_markup=kb.main)
+
 @router.message(F.photo)
 async def found_car_by_photo(message: Message):
     global searched_auto_ai, ads, index, car, page
@@ -58,7 +66,7 @@ async def found_car_by_photo(message: Message):
     page = 1
     info = wiki_prs.get_car_info(searched_auto_ai)
     if (type(info) == str):
-        await message.answer(text=info)
+        await message.answer(text=info, reply_markup=kb.main)
     else:
         media = []
         for img in info['car_images']:
@@ -79,7 +87,7 @@ async def found_car_by_text(message: Message):
     global searched_auto_wiki
     info = wiki_prs.get_car_info(message.text)
     if (type(info) == str):
-        await message.answer(text=info)
+        await message.answer(text=info, reply_markup=kb.main)
     else:
         media = []
         for img in info['car_images']:
