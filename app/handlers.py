@@ -3,6 +3,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message, FSInputFile, CallbackQuery, InputMediaPhoto
 
 import app.keyboards as kb
+import app.car_ad as car
 import app.database.requests as rq
 import app.parser.drom_parser as drom_prs
 import app.parser.wiki_parser as wiki_prs
@@ -16,20 +17,10 @@ searched_auto_ai = ""
 searched_auto_wiki = ""
 ads = []
 index = 0
-car = ''
+car_ad = None
 page = 1
 
-class Car:
-    def __init__(self, info_dict: dict):
-        self.auto_name = info_dict['auto_name']
-        self.price = info_dict['price']
-        self.engine = info_dict['engine']
-        self.fuel = info_dict['fuel']
-        self.gearbox = info_dict['gearbox']
-        self.drive_type = info_dict['drive_type']
-        self.mileage = info_dict['mileage']
-        self.url = info_dict['url']
-        self.photo = info_dict['photo']
+current_favorite_ad_id = 0
 
 @router.message(CommandStart())
 async def cmd_start(message: Message):
@@ -51,7 +42,7 @@ async def favourites(callback: CallbackQuery):
 
 @router.message(F.photo)
 async def found_car_by_photo(message: Message):
-    global searched_auto_ai, ads, index, car, page
+    global searched_auto_ai, ads, index, car_ad, page
     photo_id = message.photo[-1].file_id
     file = await message.bot.get_file(photo_id)
     photo_name = f"{photo_id}.jpg"
@@ -62,7 +53,7 @@ async def found_car_by_photo(message: Message):
     searched_auto_ai = ai.found_car_by_photo(photo_name)
     ads = []
     index = 0
-    car = ''
+    car_ad = None
     page = 1
     info = wiki_prs.get_car_info(searched_auto_ai)
     if (type(info) == str):
@@ -71,7 +62,10 @@ async def found_car_by_photo(message: Message):
         media = []
         for img in info['car_images']:
             media.append(InputMediaPhoto(type='photo', media=img))
-        await message.answer_media_group(media)
+        try:
+            await message.answer_media_group(media)
+        except:
+            await message.answer(text='Не удалось загрузить фото')
         await message.answer(text='Нашел похожий автомобиль\n\n'
                                   f'Это {searched_auto_ai}\n\n'
                                   f'{info["car_info"]}',
@@ -102,12 +96,12 @@ async def found_car_by_text(message: Message):
 @router.callback_query(F.data == 'favourite')
 async def favourites(callback: CallbackQuery):
     await callback.answer('')
-    await callback.message.answer(text='(BETA)Ваши избранные объявления:',
+    await callback.message.answer(text='Ваши избранные объявления:',
                          reply_markup=await kb.items(callback.message.from_user.id))
 
 @router.callback_query(F.data == 'ad')
 async def found_ad(callback: CallbackQuery):
-    global ads, index, car, searched_auto_ai, page
+    global ads, index, car_ad, searched_auto_ai, page
     await callback.answer('Поиск объявлений')
     if len(ads) == 0:
         if searched_auto_ai != '':
@@ -122,32 +116,43 @@ async def found_ad(callback: CallbackQuery):
         page += 1
         ads = drom_prs.get_more_drom_ads_(page)
         index = 0
-    car = Car(ads[index])
+    car_ad = ads[index]
     index += 1
-    await callback.message.answer_photo(photo=car.photo,
-                                        caption=f'{car.auto_name}\n\n'
-                                                f'Двигатель: {car.engine}\n'
-                                                f'Топливо: {car.fuel}\n'
-                                                f'Привод: {car.drive_type}\n'
-                                                f'КПП: {car.gearbox}\n'
-                                                f'Пробег: {car.mileage}\n\n'
-                                                f'Цена: {car.price}',
-                                        reply_markup=await kb.found_More_Ad(car.url))
+    await callback.message.answer_photo(photo=car_ad.photo,
+                                        caption=f'{car_ad.auto_name}\n\n'
+                                                f'Двигатель: {car_ad.engine}\n'
+                                                f'Топливо: {car_ad.fuel}\n'
+                                                f'Привод: {car_ad.drive_type}\n'
+                                                f'КПП: {car_ad.gearbox}\n'
+                                                f'Пробег: {car_ad.mileage}\n\n'
+                                                f'Цена: {car_ad.price}',
+                                        reply_markup=await kb.found_More_Ad(car_ad.url))
 
 @router.callback_query(F.data.startswith('items_'))
 async def get_favourite_ad(callback: CallbackQuery):
-    await callback.message.answer_photo(photo=FSInputFile(r'image\picture.png'),
-                                        caption=f'(BETA){car.auto_name}\n\n'
-                                                f'Объем двигателя: {"engine_capacity"}\n'
-                                                f'Мощность: {"engine_power"}\n'
-                                                f'Привод: {"drive_type"}\n'
-                                                f'Тип кузова: {"body_type"}\n'
-                                                f'Пробег: {"mileage"}\n\n'
-                                                f'Цена: {"price"}',
-                                        reply_markup=await kb.get_url_select_auto(callback.data.split("_")[1]))
+    global current_favorite_ad_id
+    favourite_ad = await rq.get_item(int(callback.data.split("_")[1]))
+    current_favorite_ad_id = favourite_ad.id
+    await callback.answer('')
+    await callback.message.answer_photo(photo=favourite_ad.photo_url,
+                                        caption=f'{favourite_ad.name}\n\n'
+                                                f'Двигатель: {favourite_ad.engine}\n'
+                                                f'Топливо: {favourite_ad.fuel}\n'
+                                                f'Привод: {favourite_ad.drive_type}\n'
+                                                f'КПП: {favourite_ad.gearbox}\n'
+                                                f'Пробег: {favourite_ad.mileage}\n\n'
+                                                f'Цена: {favourite_ad.price}',
+                                        reply_markup=await kb.get_url_select_auto(favourite_ad.url))
+
+@router.callback_query(F.data == 'delete_favorite')
+async def add_favourites(callback: CallbackQuery):
+    await callback.answer('Удаление')
+    if (current_favorite_ad_id == 0):
+        await callback.message.answer(text='Ошибка не удалось удалить')
+    else:
+        await rq.delete_item(current_favorite_ad_id)
 
 @router.callback_query(F.data == 'add_favourites')
 async def add_favourites(callback: CallbackQuery):
-    global car
-    await callback.answer('(BETA)Добавленно в избранное')
-    await rq.add_item(callback.message.from_user.id, car.auto_name, car.url)
+    await callback.answer('Добавленно в избранное')
+    await rq.add_item(callback.message.from_user.id, car_ad)

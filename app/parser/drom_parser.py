@@ -7,6 +7,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 
+import app.car_ad as car
+
 current_url = ''
 
 def get_drom_ads_with_photos(auto_name):
@@ -84,17 +86,17 @@ def parse_drom_ads(url, page):
             img_tag = block.find("img", class_="css-9w7beg evrha4s0")
             img_url = img_tag["src"] if img_tag and "src" in img_tag.attrs else None
 
-            ads.append({
-                "auto_name": title,
-                "price": price,
-                "engine": desc_items[0],
-                "fuel": desc_items[1],
-                "gearbox": desc_items[2],
-                "drive_type": desc_items[3],
-                "mileage": desc_items[4],
-                "url": link,
-                "photo": img_url
-            })
+            ads.append(car.CarAd(
+                title,
+                price,
+                desc_items[0],
+                desc_items[1],
+                desc_items[2],
+                desc_items[3],
+                desc_items[4],
+                link,
+                img_url
+            ))
 
         except Exception as e:
             print(f"⚠️ Ошибка при обработке объявления: {e}")

@@ -23,6 +23,9 @@ def get_car_info(car_name):
 
 def car_info_check(car_info : str):
     info = set(re.split(r'[—:;!,.\n? ]+', car_info.lower()))
+
+    if len(info) == 0: return False
+
     key_words = ('автомобиль автомобилей автомобиля автомобилю автомобилем'
                  'автомобиле машина авто спорткар маслкар суперкар'
                  'родстер купе хетчбэк пикап кроссовер джип '

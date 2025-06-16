@@ -20,6 +20,7 @@ async def get_url_select_auto(url):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text='Перейти к объявлению', url=url)],
     [InlineKeyboardButton(text='Избранное📌', callback_data='favourite')],
+    [InlineKeyboardButton(text='Удалить из избранного🗑', callback_data='delete_favorite')],
     [InlineKeyboardButton(text='На главную', callback_data='main_menu')]
     ])
     return keyboard
@@ -38,7 +39,7 @@ async def items(tg_id):
     all_items = await get_items(tg_id)
     keyboard = InlineKeyboardBuilder()
     for item in all_items:
-        keyboard.add(InlineKeyboardButton(text=item.name, callback_data=f'items_{item.url}'))
+        keyboard.add(InlineKeyboardButton(text=item.name, callback_data=f'items_{item.id}'))
     keyboard.add(InlineKeyboardButton(text='Избранное📌', callback_data='favourite'))
     keyboard.add(InlineKeyboardButton(text='На главную', callback_data='main_menu'))
     return keyboard.adjust(1).as_markup()
