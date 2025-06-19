@@ -7,7 +7,7 @@ main = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text='На главную', callback_data='main_menu')]
 ])
 
-def get_main_inline_keyboard(url):
+async def get_main_inline_keyboard(url):
     main_inline_keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='Перейти подробному описанию', url=url)],
         [InlineKeyboardButton(text='Найти объявления', callback_data='ad')],
@@ -15,6 +15,14 @@ def get_main_inline_keyboard(url):
         [InlineKeyboardButton(text='На главную', callback_data='main_menu')]
     ])
     return main_inline_keyboard
+
+def get_main_inline_keyboard_without_info():
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='Найти объявления', callback_data='ad')],
+        [InlineKeyboardButton(text='Избранное📌', callback_data='favourite')],
+        [InlineKeyboardButton(text='На главную', callback_data='main_menu')]
+    ])
+    return keyboard
 
 async def get_url_select_auto(url):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[

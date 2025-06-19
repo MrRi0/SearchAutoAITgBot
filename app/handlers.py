@@ -7,6 +7,7 @@ import app.car_ad as car
 import app.database.requests as rq
 import app.parser.drom_parser as drom_prs
 import app.parser.wiki_parser as wiki_prs
+import app.parser.image_parser as img_prs
 import os
 
 import AI.AISearch as ai
@@ -25,7 +26,7 @@ current_favorite_ad_id = 0
 @router.message(CommandStart())
 async def cmd_start(message: Message):
     await rq.set_user(message.from_user.id)
-    await message.answer_photo(photo=FSInputFile(r'image\picture.png'),
+    await message.answer_photo(photo=FSInputFile(r'image\main_image.png'),
                                caption='Привет! Я могу определить марку и модель автомобиля по фото,'
                                         ' а также подобрать актуальные объявления по найденному автомобилю'
                                         '\n\nПросто отправь фото или введи название автомобиля',
@@ -34,7 +35,7 @@ async def cmd_start(message: Message):
 @router.callback_query(F.data == 'main_menu')
 async def favourites(callback: CallbackQuery):
     await callback.answer('')
-    await callback.message.answer_photo(photo=FSInputFile(r'image\picture.png'),
+    await callback.message.answer_photo(photo=FSInputFile(r'image\main_image.png'),
                                caption='Привет! Я могу определить марку и модель автомобиля по фото,'
                                        ' а также подобрать актуальные объявления по найденному автомобилю'
                                        '\n\nПросто отправь фото или введи название автомобиля',
@@ -57,23 +58,30 @@ async def found_car_by_photo(message: Message):
     page = 1
     info = wiki_prs.get_car_info(searched_auto_ai)
     if (type(info) == str):
-        await message.answer(text=info, reply_markup=kb.main)
+        img_link = img_prs.get_image_by_name(searched_auto_ai)
+        await message.answer_photo(photo=img_link, caption='Нашел похожий автомобиль\n\n'
+                                  f'Это {searched_auto_ai}',
+                             reply_markup=kb.get_main_inline_keyboard_without_info())
     else:
         media = []
         for img in info['car_images']:
             media.append(InputMediaPhoto(type='photo', media=img))
         try:
             await message.answer_media_group(media)
+            await message.answer(text='Нашел похожий автомобиль\n\n'
+                                      f'Это {searched_auto_ai}\n\n'
+                                      f'{info["car_info"]}',
+                                 reply_markup=kb.get_main_inline_keyboard(info['url']))
         except:
-            await message.answer(text='Не удалось загрузить фото')
-        await message.answer(text='Нашел похожий автомобиль\n\n'
-                                  f'Это {searched_auto_ai}\n\n'
-                                  f'{info["car_info"]}',
-                             reply_markup=kb.get_main_inline_keyboard(info['url']))
+            img_link = img_prs.get_image_by_name(searched_auto_ai)
+            await message.answer_photo(photo=img_link, caption='Нашел похожий автомобиль\n\n'
+                                      f'Это {searched_auto_ai}\n\n'
+                                      f'{info["car_info"]}',
+                                 reply_markup=kb.get_main_inline_keyboard(info['url']))
 
 @router.message(F.text == 'Избранное📌')
 async def favourites(message: Message):
-    await message.answer(text='(BETA)Ваши избранные объявления:',
+    await message.answer(text='Ваши избранные объявления:',
                          reply_markup=await kb.items(message.from_user.id))
 
 @router.message(F.text)
@@ -83,15 +91,32 @@ async def found_car_by_text(message: Message):
     if (type(info) == str):
         await message.answer(text=info, reply_markup=kb.main)
     else:
+        # media = []
+        # for img in info['car_images']:
+        #         media.append(InputMediaPhoto(type='photo', media=img))
+        # searched_auto_wiki = info['car_name']
+        # await message.answer_media_group(media)
+        # await message.answer(text='Нашел похожий автомобиль\n\n'
+        #                           f'Это {info["car_name"]}\n\n'
+        #                           f'{info["car_info"]}',
+        #                      reply_markup=kb.get_main_inline_keyboard(info['url']))
         media = []
         for img in info['car_images']:
-                media.append(InputMediaPhoto(type='photo', media=img))
+            media.append(InputMediaPhoto(type='photo', media=img))
         searched_auto_wiki = info['car_name']
-        await message.answer_media_group(media)
-        await message.answer(text='Нашел похожий автомобиль\n\n'
-                                  f'Это {info["car_name"]}\n\n'
-                                  f'{info["car_info"]}',
-                             reply_markup=kb.get_main_inline_keyboard(info['url']))
+        try:
+            await message.answer_media_group(media)
+            await message.answer(text='Нашел похожий автомобиль\n\n'
+                                      f'Это {info["car_name"]}\n\n'
+                                      f'{info["car_info"]}',
+                                 reply_markup=kb.get_main_inline_keyboard(info['url']))
+        except:
+            img_link = img_prs.get_image_by_name(info["car_name"])
+            await message.answer_photo(photo=img_link)
+            await message.answer(text='Нашел похожий автомобиль\n\n'
+                                       f'Это {info["car_name"]}\n\n'
+                                       f'{info["car_info"]}',
+                               reply_markup=kb.get_main_inline_keyboard(info['url']))
 
 @router.callback_query(F.data == 'favourite')
 async def favourites(callback: CallbackQuery):
