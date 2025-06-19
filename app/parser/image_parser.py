@@ -24,12 +24,10 @@ def get_image_by_name(auto_name):
     search_box.send_keys(Keys.ENTER)
 
     soup = BeautifulSoup(driver.page_source, "html.parser")
-    print(driver.current_url)
     driver.quit()
 
     img = soup.find("img", attrs={"class": "ImagesContentImage-Image"})
     link = img.get("src")
     if link and not link.startswith("http"):
         link = "https:" + link
-    print(link)
     return link

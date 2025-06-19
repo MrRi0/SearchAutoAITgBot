@@ -91,15 +91,6 @@ async def found_car_by_text(message: Message):
     if (type(info) == str):
         await message.answer(text=info, reply_markup=kb.main)
     else:
-        # media = []
-        # for img in info['car_images']:
-        #         media.append(InputMediaPhoto(type='photo', media=img))
-        # searched_auto_wiki = info['car_name']
-        # await message.answer_media_group(media)
-        # await message.answer(text='Нашел похожий автомобиль\n\n'
-        #                           f'Это {info["car_name"]}\n\n'
-        #                           f'{info["car_info"]}',
-        #                      reply_markup=kb.get_main_inline_keyboard(info['url']))
         media = []
         for img in info['car_images']:
             media.append(InputMediaPhoto(type='photo', media=img))
