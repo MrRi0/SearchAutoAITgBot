@@ -12,11 +12,9 @@ def get_car_info(car_name):
             return 'Ошибка. Не могу найти данный автомобиль. Введите название по-другому. Или это не автомобиль'
 
         car_name = page.title
-        car_imgs = [i for i in page.images if i[-3:] != 'svg'][:3]
         url = page.url
         return {"car_name" : car_name,
                 "car_info" : car_info,
-                "car_images" : car_imgs,
                 "url" : url}
     except:
         return 'Ошибка. Не могу найти данный автомобиль. Введите название по-другому'

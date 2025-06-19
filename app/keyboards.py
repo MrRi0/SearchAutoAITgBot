@@ -7,7 +7,7 @@ main = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text='На главную', callback_data='main_menu')]
 ])
 
-async def get_main_inline_keyboard(url):
+def get_main_inline_keyboard(url):
     main_inline_keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='Перейти подробному описанию', url=url)],
         [InlineKeyboardButton(text='Найти объявления', callback_data='ad')],
