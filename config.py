@@ -1,1 +1,2 @@
-TOKEN='8024837008:AAEGUCbe4fj51g2qnGwt6MAxj1X3NcmOZY4'
+#bot token from BotFather
+TOKEN=''
